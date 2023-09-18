@@ -21,7 +21,8 @@ class App extends BaseConfig
 	| environments.
 	|
 	*/
-	public $baseURL = 'http://localhost/GSB';
+	public $baseURL = 'http://192.175.1.12/fraislouis/GSB/';
+	//public $baseURL = 'http://localhost/GSB';
 
 	/*
 	|--------------------------------------------------------------------------
