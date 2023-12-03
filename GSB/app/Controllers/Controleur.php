@@ -2,7 +2,9 @@
 //acces au controller parent pour l heritage
 namespace App\Controllers;
 use CodeIgniter\Controller;
-
+// importer les classes nécéssaires pour logs
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 //=========================================================================================
 //définition d'une classe Controleur (meme nom que votre fichier Controleur.php) 
 //héritée de Controller et permettant d'utiliser les raccoucis et fonctions de CodeIgniter
@@ -55,11 +57,7 @@ public function index(){
 		if($_GET["action"] == "accueil"){
 			$this->accueil();
 		}
-			
-		
-
-		}
-		else{
+		}else{
 		$this->accueil();
 	}
 }
@@ -94,22 +92,24 @@ public function HorsForfait() {
 	echo view('renseignerFicheHorsForfait');
 }
 
+
+
+public function __construct() {
+// Initialisez le logger dans le constructeur du contrôleur
+	$this->logger = new Logger('monLoggerA');
+	$this->logger->pushHandler(new StreamHandler('/tmp/monfichier.log', Logger::WARNING));
+}
+	
 public function login() {
 	$Modele = new \App\Models\Modele();
 	if ((isset($_POST["user"]))&&((isset($_POST["password"])))){
-
 		$donnees = $Modele->Connexion($_POST["user"], $_POST["password"]);
 		
-
 		if (isset($donnees[0]->mdp)){
-
 			$donnees2 = $Modele->Verification($donnees[0]->id, date("F"));
-
 
 			if($donnees2[0]->nb==0){
 				$donnees3 = $Modele->CreerFicheFrais($donnees[0]->id, date("F"));
-			
-
 			}
 
 			session_start();
@@ -117,25 +117,30 @@ public function login() {
 			$_SESSION['nom'] = $donnees[0]->nom;
 			$_SESSION['prenom'] = $donnees[0]->prenom;
 			$this->voirFicheFrais(date("F"));
-			
+			// Log d'une information
+                	$this->logger->info('Utilisateur connecté: ' . $_SESSION['nom'] . ' ' . $_SESSION['prenom']);
+                	$this->voirFicheFrais(date("F"));
 		}
 		else{
+			// Log d'une erreur
+                	$this->logger->error('Échec de la connexion pour l\'utilisateur: ' . $_POST["user"]);
+
 			echo view('page_acceuille');
 		}
-	}
-	
+	}	
 }
 
-public function envoie(){
+public function envoie() {
+        $Modele = new \App\Models\Modele();
+        session_start();
+        if ((isset($_POST["etape"])) && (isset($_POST["km"])) && (isset($_POST["nuit"])) && (isset($_POST["repasResto"]))) {
+            $donnees4 = $Modele->envoieFicheFrais($_POST["etape"], $_POST["km"], $_POST["nuit"], $_POST["repasResto"], $_SESSION['idVisiteur'], date("F"));
+            $this->voirFicheFrais(date("F"));
 
-	$Modele = new \App\Models\Modele();
-	session_start();
-	if((isset($_POST["etape"])) && (isset($_POST["km"])) && (isset($_POST["nuit"])) && (isset($_POST["repasResto"]))){
-
-		$donnees4 = $Modele->envoieFicheFrais($_POST["etape"],$_POST["km"],$_POST["nuit"],$_POST["repasResto"],$_SESSION['idVisiteur'],date("F"));
-		$this->voirFicheFrais(date("F"));
-	}
-}
+            // Log d'une information
+            $this->logger->info('Fiche de frais envoyée avec succès pour l\'utilisateur: ' . $_SESSION['nom'] . ' ' . $_SESSION['prenom']);
+        }
+    }
 
 public function envoieHF(){
 
@@ -158,14 +163,13 @@ public function voirFicheFrais($mois){
 	$_SESSION['ficheHorsFrais'] = $donnees7;
 	
 	echo view("ConsulterFicheFrais");
-
-
-
 }
 
 // Affiche une erreur
 public function erreur($msgErreur) {
-  echo view('vueErreur.php', $msgErreur);
+	// Log d'une erreur
+	$this->logger->error('Erreur: ' . $msgErreur);
+	echo view('vueErreur.php', $msgErreur);
 }
 
 //==========================
